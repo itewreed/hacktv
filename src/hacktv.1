@@ -363,6 +363,22 @@ is real or complex.
 .IP
 If no valid output prefix is provided, file: is assumed.
 .PP
+CVBS file output options
+.TP
+\fB\-o\fR, \fB\-\-output\fR cvbs:<filename>
+Write a CVBS file for decode\-orc, ld\-decode and vhs\-decode.
+.TP
+\fB\-\-cvbs\-encoding\fR <type>
+Set the sample encoding, u10 (CVBS_U10_4FSC) or u16 (CVBS_U16_4FSC). Default: u10
+.IP
+The signal is resampled to 4 x fsc and stored with 10\-bit levels as
+defined by the CVBS file format specification. Composite modes write
+<filename>.cvbs, \-\-s\-video writes <filename>.cvbsy and <filename>.cvbsc.
+A <filename>.meta SQLite file describes the signal. Supported are the
+baseband modes pal, secam, ntsc and 525pal\-m, and monochrome 625 and
+525\-line modes. The sample rate must give a whole number of samples per
+line, the default of 20.25 MHz works for all of them.
+.PP
 NOTE: The number of samples per line is rounded to the nearest integer,
 which may result in a slight frame rate error.
 .PP

@@ -116,6 +116,7 @@ typedef struct {
 	char *ffmt;
 	char *fopts;
 	int fl2k_audio;
+	int cvbs_encoding;
 	
 	/* Video encoder state */
 	vid_t vid;

@@ -55,6 +55,7 @@ known prefix is treated as a file name.
 | `-o soapysdr[:<args>]` | Any SoapySDR device, e.g. `-o soapysdr:driver=lime` |
 | `-o fl2k[:<device index>]` | FL2000 USB-to-VGA adapter (osmo-fl2k) |
 | `-o file:<name>` or `-o <name>` | Raw samples to a file; `-` writes to stdout |
+| `-o cvbs:<name>` | CVBS file for decode-orc, ld-decode and vhs-decode, see [CVBS file output](#cvbs-file-output) |
 
 ### RF options (HackRF and SoapySDR)
 
@@ -91,6 +92,64 @@ decoder accepts.
 | `-t, --type <type>` | Sample format: `uint8`, `int8`, `uint16`, `int16` (default), `int32`, `float` |
 
 Baseband modes write real samples, RF modes write interleaved I/Q pairs.
+
+### CVBS file output
+
+`-o cvbs:<name>` writes the signal in the
+[CVBS file format](https://decode-orc.github.io/cvbs-file-format-specification)
+used by decode-orc, ld-decode and vhs-decode. This makes it possible to feed a
+synthetic hacktv signal, for example a scrambled one, straight into
+decode-orc and test its decoders and descramblers against it.
+
+| Option | Description |
+|--------|-------------|
+| `--cvbs-encoding <type>` | `u10` (default, `CVBS_U10_4FSC`) or `u16` (`CVBS_U16_4FSC`, the 10-bit value shifted left by 6) |
+
+What is written:
+
+- `<name>.cvbs` for composite modes, or `<name>.cvbsy` and `<name>.cvbsc`
+  with `--s-video`. A `.cvbs`, `.cvbsy`, `.cvbsc` or `.meta` extension on
+  `<name>` is removed first.
+- `<name>.meta`, the SQLite metadata file with the video standard, sample
+  encoding and signal state presets, the number of frames, and the hacktv
+  version and mode in `capture_notes`. It needs SQLite at build time (see
+  [building.md](building.md)); without it only the sample data is written.
+
+How the signal is converted:
+
+- The baseband signal is resampled to exactly 4 × fsc of the matching
+  standard: 17,734,475 Hz for PAL and SECAM, 14,318,181.8 Hz for NTSC and
+  14,302,448.1 Hz for PAL-M. Every frame has the exact size the
+  specification requires (709,379 samples for PAL and SECAM, 477,750 for NTSC,
+  477,225 for PAL-M).
+- Each frame starts with the first sample after 0H of line 1 (the falling
+  edge of the line sync pulse).
+- Levels are mapped with hacktv's blanking and white levels to the 10-bit
+  values of the preset (PAL/SECAM: sync 4, blanking 256, white 844;
+  NTSC/PAL-M: sync 16, blanking 240, white 800). Values are limited to the
+  legal range 4–1019 and hacktv reports how many samples it had to clip.
+  If the black level differs from the preset (for example PAL-M without
+  set-up) it is stored in `black_level`.
+- PAL is sampled on the ±45° axes and NTSC on the I/Q axes, so both are
+  declared `STANDARD_STABLE_LOCKED`. PAL-M, SECAM and monochrome are
+  declared `STANDARD_STABLE_UNLOCKED`.
+- Only complete frames are kept. If hacktv is stopped with Ctrl+C the
+  partial last frame is removed.
+
+Supported modes are the baseband modes `pal`, `secam`, `ntsc` and
+`525pal-m`, and these with `--nocolour` (stored as monochrome PAL or NTSC).
+RF modes, PAL-N, PAL-60, MAC and the other line standards cannot be stored,
+because the specification has no preset for them. The sample rate must give a
+whole number of samples per line, and `--pixelrate` must not be used. The
+default of 20.25 MHz works for all supported modes.
+
+Audio is not written yet.
+
+Example, a Videocrypt test signal for decode-orc:
+
+```sh
+hacktv -m pal --videocrypt free -o cvbs:vc-free test
+```
 
 ## General options
 

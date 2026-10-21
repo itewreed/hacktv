@@ -25,6 +25,7 @@ OBJS    := acp.o \
            nicam728.o \
            rf.o \
            rf_file.o \
+           rf_cvbs.o \
            sis.o \
            spdif.o \
            subtitles.o \
@@ -55,6 +56,12 @@ ifeq ($(SOAPYSDR),SoapySDR)
 	OBJS += rf_soapysdr.o
 	PKGS += SoapySDR
 	CFLAGS += -DHAVE_SOAPYSDR
+endif
+
+SQLITE3 := $(shell $(PKGCONF) --exists sqlite3 && echo sqlite3)
+ifeq ($(SQLITE3),sqlite3)
+	PKGS += sqlite3
+	CFLAGS += -DHAVE_SQLITE3
 endif
 
 FL2K := $(shell $(PKGCONF) --exists libosmo-fl2k && echo fl2k)

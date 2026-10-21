@@ -57,6 +57,7 @@ extern int rf_close(rf_t *s);
 #include "rf_hackrf.h"
 #include "rf_soapysdr.h"
 #include "rf_fl2k.h"
+#include "rf_cvbs.h"
 
 #endif
 

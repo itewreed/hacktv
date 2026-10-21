@@ -9,6 +9,8 @@ in brackets. The current options are described in [usage.md](usage.md) and
 
 ## Recent changes (from the git log)
 
+- **2026-10** – CVBS file output for decode-orc, ld-decode and vhs-decode
+  (`-o cvbs:<name>`, `--cvbs-encoding`).
 - **2026-10** – Fast-forward and rewind while playing a video (right and left
   arrow keys, 60 seconds), with an on-screen icon and position. Cablecrypt
   (TV Cabo) scrambling (`--cablecrypt-tvcabo`). Sky New Zealand and

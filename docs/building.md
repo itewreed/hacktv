@@ -24,6 +24,7 @@ Optional, detected automatically:
 |---------|-----------------------|---------|
 | SoapySDR | `libsoapysdr-dev` | `-o soapysdr` output (LimeSDR, PlutoSDR, USRP and others) |
 | osmo-fl2k | `libosmo-fl2k-dev` | `-o fl2k` output through FL2000 USB-to-VGA adapters |
+| SQLite | `libsqlite3-dev` | The `.meta` file of the `-o cvbs` output |
 
 If a driver is not compiled in, selecting it prints for example
 `FL2K support is not available in this build of hacktv.`
@@ -40,7 +41,7 @@ sudo apt-get install build-essential git pkg-config \
     libswresample-dev libswscale-dev libavformat-dev libavcodec-dev \
     libfreetype-dev libpng-dev zlib1g-dev
 # optional
-sudo apt-get install libsoapysdr-dev libosmo-fl2k-dev
+sudo apt-get install libsoapysdr-dev libosmo-fl2k-dev libsqlite3-dev
 ```
 
 On older releases the FreeType package is called `libfreetype6-dev`.

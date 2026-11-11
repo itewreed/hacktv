@@ -78,6 +78,10 @@ static void print_usage(void)
 		"      --logo <path>              Overlay picture logo over video.\n"
 		"      --timestamp                Overlay video timestamp over video.\n"
 		"      --teletext <path>          Enable teletext output. (625 line modes only)\n"
+		"      --videodat <source>        Enable Channel VideoDat output. (625 line modes only)\n"
+		"      --videodat-lines <mask>[,<mask>]\n"
+		"                                 Select the VideoDat lines. Default: 0x0070\n"
+		"      --videodat-info <name>     Send a VideoDat info block with this name.\n"
 		"      --wss <mode>               Set WSS output. Defaults to auto. (625 line modes only)\n"
 		"      --letterbox                Letterboxes widescreen content on 4:3 screen.\n"
 		"      --pillarbox                Zooms widescreen content to fill 4:3 screen.\n"
@@ -265,6 +269,24 @@ static void print_usage(void)
 		"\n"
 		"Teletext support in hacktv is only compatible with 625 line PAL modes.\n"
 		"NTSC and SECAM variations exist and may be supported in the future.\n"
+		"\n"
+		"Channel VideoDat\n"
+		"\n"
+		"Channel VideoDat was a data service Pro7 broadcast in the VBI from 1990\n"
+		"to 1994: 10 bytes per line at 2 Mbit/s. The --videodat source can be:\n"
+		"\n"
+		"  demo         A small text file and the clock, sent over and over.\n"
+		"  <path>       A file, or all files in a directory, sent over and over\n"
+		"               with the clock. Names are cut to 12 characters.\n"
+		"  raw:<path>   A VideoDat byte stream, 10 bytes per line, as written by\n"
+		"               raspi-teletext's vdenc or videodat_decoder.py --save-bytes.\n"
+		"               Use raw:- for stdin. Files are looped.\n"
+		"\n"
+		"--videodat-lines takes one 16 bit mask for both fields or two separated\n"
+		"by a comma. Bit n set means line 7+n (first field) or 320+n (second\n"
+		"field) carries data. The default, 0x0070, is lines 11-13 and 324-326,\n"
+		"where Pro7 sent it. Each line carries 250 bytes/s. VideoDat lines are\n"
+		"taken before teletext, which uses the remaining lines.\n"
 		"\n"
 		"WSS (Widescreen Signaling)\n"
 		"\n"
@@ -520,6 +542,9 @@ enum {
 	_OPT_MAC_AUDIO_L1_PROTECTION,
 	_OPT_MAC_AUDIO_L2_PROTECTION,
 	_OPT_SIS,
+	_OPT_VIDEODAT,
+	_OPT_VIDEODAT_LINES,
+	_OPT_VIDEODAT_INFO,
 	_OPT_SWAP_IQ,
 	_OPT_OFFSET,
 	_OPT_PASSTHRU,
@@ -619,6 +644,9 @@ int main(int argc, char *argv[])
 		{ "mac-audio-l1-protection", no_argument, 0, _OPT_MAC_AUDIO_L1_PROTECTION },
 		{ "mac-audio-l2-protection", no_argument, 0, _OPT_MAC_AUDIO_L2_PROTECTION },
 		{ "sis",            required_argument, 0, _OPT_SIS },
+		{ "videodat",       required_argument, 0, _OPT_VIDEODAT },
+		{ "videodat-lines", required_argument, 0, _OPT_VIDEODAT_LINES },
+		{ "videodat-info",  required_argument, 0, _OPT_VIDEODAT_INFO },
 		{ "swap-iq",        no_argument,       0, _OPT_SWAP_IQ },
 		{ "offset",         required_argument, 0, _OPT_OFFSET },
 		{ "passthru",       required_argument, 0, _OPT_PASSTHRU },
@@ -684,6 +712,9 @@ int main(int argc, char *argv[])
 	s.shuffle = 0;
 	s.verbose = 0;
 	s.teletext = NULL;
+	s.videodat = NULL;
+	s.videodat_lines = NULL;
+	s.videodat_info = NULL;
 	s.position = 0;
 	s.wss = NULL;
 	s.letterbox = 0;
@@ -1135,6 +1166,18 @@ int main(int argc, char *argv[])
 		
 		case _OPT_SIS: /* --sis <mode> */
 			s.sis = optarg;
+			break;
+		
+		case _OPT_VIDEODAT: /* --videodat <source> */
+			s.videodat = optarg;
+			break;
+		
+		case _OPT_VIDEODAT_LINES: /* --videodat-lines <mask>[,<mask>] */
+			s.videodat_lines = optarg;
+			break;
+		
+		case _OPT_VIDEODAT_INFO: /* --videodat-info <name> */
+			s.videodat_info = optarg;
 			break;
 		
 		case _OPT_SWAP_IQ: /* --swap-iq */
@@ -1754,6 +1797,19 @@ int main(int argc, char *argv[])
 		}
 		
 		vid_conf.sis = s.sis;
+	}
+	
+	if(s.videodat)
+	{
+		if(vid_conf.type != VID_RASTER_625)
+		{
+			fprintf(stderr, "Channel VideoDat is only available with 625 line modes.\n");
+			return(-1);
+		}
+		
+		vid_conf.videodat = s.videodat;
+		vid_conf.videodat_lines = s.videodat_lines;
+		vid_conf.videodat_info = s.videodat_info;
 	}
 	
 	vid_conf.swap_iq = s.swap_iq;

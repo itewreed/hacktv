@@ -64,6 +64,15 @@ Overlay video timestamp over video.
 \fB\-\-teletext\fR <path>
 Enable teletext output. (625 line modes only)
 .TP
+\fB\-\-videodat\fR <source>
+Enable Channel VideoDat output. (625 line modes only)
+.TP
+\fB\-\-videodat\-lines\fR <mask>[,<mask>]
+Select the VideoDat lines. Default: 0x0070
+.TP
+\fB\-\-videodat\-info\fR <name>
+Send a VideoDat info block with this name.
+.TP
 \fB\-\-wss\fR <mode>
 Set WSS output. Defaults to auto. (625 line modes only)
 .TP
@@ -405,6 +414,21 @@ Lines 7\-22 and 320\-335 are used, 16 lines per field.
 .PP
 Teletext support in hacktv is only compatible with 625 line PAL modes.
 NTSC and SECAM variations exist and may be supported in the future.
+.PP
+Channel VideoDat
+.PP
+Channel VideoDat was a data service Pro7 broadcast in the VBI from 1990
+to 1994: 10 bytes per line at 2 Mbit/s. The \-\-videodat source can be
+"demo" (a small text file and the clock, sent over and over), a file or a
+directory of files (sent over and over with the clock, names cut to 12
+characters), or raw:<path> for a byte stream of 10 bytes per line as
+written by raspi\-teletext's vdenc. Use raw:\- for stdin.
+.PP
+\-\-videodat\-lines takes one 16 bit mask for both fields or two separated
+by a comma. Bit n set means line 7+n (first field) or 320+n (second
+field) carries data. The default, 0x0070, is lines 11\-13 and 324\-326,
+where Pro7 sent it. Each line carries 250 bytes/s. VideoDat lines are
+taken before teletext, which uses the remaining lines.
 .PP
 WSS (Widescreen Signaling)
 .PP

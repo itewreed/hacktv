@@ -241,6 +241,9 @@ D/D2-MAC audio:
 | Option | Description |
 |--------|-------------|
 | `--teletext <path>` | Teletext from a `.tti` file, or every file in a directory. `raw:<file>` reads 42-byte packets, `raw:-` reads stdin. 625-line modes only, lines 7–22 and 320–335 |
+| `--videodat <source>` | Channel VideoDat (Pro7, 1990–1994): `demo`, a file or a directory of files, or `raw:<file>` / `raw:-` for a byte stream. 625-line modes only, see [Channel VideoDat](#channel-videodat) |
+| `--videodat-lines <mask>[,<mask>]` | VideoDat lines, default `0x0070` (lines 11–13 and 324–326) |
+| `--videodat-info <name>` | Send a VideoDat info block with this name before the files |
 | `--tx-subtitles [index]` | Show subtitles as teletext on page 888. On a D/D2-MAC decoder select "English subtitles" |
 | `--subtitles [index]` | Burn subtitles into the picture |
 | `--wss <mode>` | Widescreen signalling, 625 lines: `4:3`, `14:9-letterbox`, `14:9-top`, `16:9-letterbox`, `16:9-top`, `16:9+-letterbox`, `14:9-window`, `16:9`, `auto` |
@@ -252,6 +255,60 @@ D/D2-MAC audio:
 For both subtitle options the optional index selects a subtitle stream in the
 input. If the file has no subtitle stream, hacktv loads an `.srt` file with
 the same base name next to the video (for `movie.mkv`, `movie.srt`).
+
+### Channel VideoDat
+
+Channel VideoDat was a data service that Pro7 broadcast in the VBI from 1990
+to 1994. Each data line carries 10 bytes as NRZ at 2 Mbit/s, starting 11.7 µs
+after 0H. Every byte is sent like an inverted UART frame: a white start bit,
+the 8 data bits LSB first with 1 = black, and a black stop bit. The encoder is
+a port of the `videodat` program from
+[raspi-teletext](https://github.com/itewreed/raspi-teletext), and its output
+can be decoded with
+[channel-videodat-decoder](https://github.com/itewreed/channel-videodat-decoder)
+or the [decode-orc plugin](https://github.com/itewreed/orc-plugin_videodat).
+
+The `--videodat` source can be:
+
+| Source | Sent |
+|--------|------|
+| `demo` | A small text file (`HACKTV.TXT`) and the clock, over and over |
+| `<file>` or `<directory>` | The file, or every file in the directory in name order, over and over, with the clock every 5 seconds. Names are converted to upper case and cut to 12 characters |
+| `raw:<file>`, `raw:-` | A byte stream, 10 bytes per line, as written by raspi-teletext's `vdenc` or by `videodat_decoder.py --save-bytes`. Files are looped, stdin is not |
+
+Files are sent on data stream 03 and every group of 4 packets twice, as Pro7
+did. The clock packets and the send times in the file headers follow the
+position in the byte stream, so they run at the right speed also when hacktv
+writes a file faster than real time.
+
+`--videodat-lines` takes one 16-bit mask for both fields, or two separated by
+a comma for the first and the second field. Bit n set means line 7+n (first
+field) or 320+n (second field) carries data:
+
+| bit | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|-----|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|----|
+| first field | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 |
+| second field | 320 | 321 | 322 | 323 | 324 | 325 | 326 | 327 | 328 | 329 | 330 | 331 | 332 | 333 | 334 | 335 |
+
+Each line in the masks carries 250 bytes/s. The default, `0x0070`, is lines
+11–13 and 324–326, where Pro7 sent it (1500 bytes/s). The VideoDat lines are
+taken before teletext, so `--teletext` and `--videodat` together send teletext
+on the remaining VBI lines, as on Pro7. Other VBI services (VITS, VITC, CC608)
+use fixed lines and take precedence; keep them out of the masks.
+
+```sh
+# The demo on the default lines, written as a CVBS file for decode-orc
+hacktv -m pal --videodat demo -o cvbs:videodat test
+
+# A directory of files with an info block, on lines 11-15 and 324-328,
+# together with teletext
+hacktv -f 551250000 -m i -g 47 --teletext src/demo.tti \
+       --videodat software/ --videodat-info MYPACKET \
+       --videodat-lines 0x01F0 test
+
+# A byte stream from raspi-teletext's vdenc
+vdenc -l -i MYPACKET FILE.ZIP | hacktv -m pal --videodat raw:- -o cvbs:vd test
+```
 
 ## Scrambling and conditional access
 

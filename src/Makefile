@@ -33,12 +33,14 @@ OBJS    := acp.o \
            syster-ca.o \
            teletext.o \
            vbidata.o \
+           vdpacket.o \
            video.o \
            videocrypt.o \
            videocrypt-ca.o \
            videocrypt10-asic.o \
            videocrypt10-ca.o \
            videocrypts.o \
+           videodat.o \
            vitc.o \
            vits.o \
            wss.o

@@ -4893,6 +4893,19 @@ int vid_init(vid_t *s, unsigned int sample_rate, unsigned int pixel_rate, const 
 		_add_lineprocess(s, "sis", 1, 0, &s->sis, sis_render, NULL);
 	}
 	
+	/* Initialise Channel VideoDat. This comes before teletext so that
+	 * teletext leaves the VideoDat lines alone. */
+	if(s->conf.videodat)
+	{
+		if((r = videodat_init(&s->videodat, s, s->conf.videodat, s->conf.videodat_lines, s->conf.videodat_info)) != VID_OK)
+		{
+			vid_free(s);
+			return(r);
+		}
+		
+		_add_lineprocess(s, "videodat", 1, 0, &s->videodat, videodat_render, NULL);
+	}
+	
 	/* Prepare audio FIFO (1 second at 32khz) */
 	fifo_init(&s->audiofifo, 100, 320 * sizeof(int16_t) * 2);
 	fifo_reader_init(&s->audio_reader, &s->audiofifo, 0);
@@ -5319,6 +5332,11 @@ void vid_free(vid_t *s)
 	if(s->conf.vitc)
 	{
 		vitc_free(&s->vitc);
+	}
+	
+	if(s->conf.videodat)
+	{
+		videodat_free(&s->videodat);
 	}
 	
 	if(s->conf.vits)

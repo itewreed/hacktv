@@ -95,6 +95,11 @@ typedef struct {
 	int mac_audio_protection;
 	int mac_audio_companded;
 	char *sis;
+	int radiomp3_nsources;
+	const char *radiomp3_sources[RM_MAX_SOURCES];
+	int radiomp3_streams[RM_MAX_SOURCES];
+	char *radiomp3_lines;
+	int radiomp3_once;
 	int swap_iq;
 	int64_t offset;
 	char *passthru;

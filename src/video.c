@@ -4893,6 +4893,22 @@ int vid_init(vid_t *s, unsigned int sample_rate, unsigned int pixel_rate, const 
 		_add_lineprocess(s, "sis", 1, 0, &s->sis, sis_render, NULL);
 	}
 	
+	/* Initialise r@dio.mp3. This comes before teletext so that
+	 * teletext leaves the r@dio.mp3 lines alone. */
+	if(s->conf.radiomp3)
+	{
+		if((r = radiomp3_init(&s->radiomp3, s,
+			s->conf.radiomp3_nsources, s->conf.radiomp3_sources, s->conf.radiomp3_streams,
+			!s->conf.radiomp3_once, s->conf.radiomp3_lines,
+			s->conf.teletext != NULL || s->conf.txsubtitles)) != VID_OK)
+		{
+			vid_free(s);
+			return(r);
+		}
+		
+		_add_lineprocess(s, "radiomp3", 1, 0, &s->radiomp3, radiomp3_render, NULL);
+	}
+	
 	/* Prepare audio FIFO (1 second at 32khz) */
 	fifo_init(&s->audiofifo, 100, 320 * sizeof(int16_t) * 2);
 	fifo_reader_init(&s->audio_reader, &s->audiofifo, 0);
@@ -5309,6 +5325,11 @@ void vid_free(vid_t *s)
 	if(s->conf.sis)
 	{
 		sis_free(&s->sis);
+	}
+	
+	if(s->conf.radiomp3)
+	{
+		radiomp3_free(&s->radiomp3);
 	}
 	
 	if(s->conf.cc608)

@@ -9,6 +9,9 @@ in brackets. The current options are described in [usage.md](usage.md) and
 
 ## Recent changes (from the git log)
 
+- **2026-11** – r@dio.mp3 / MEGARADIO.mp3 output (`--radiomp3-stream`,
+  `--radiomp3-file`, `--radiomp3-lines`, `--radiomp3-once`), ported from
+  raspi-teletext. Playback keys are only read when stdin is a terminal.
 - **2026-10** – CVBS file output for decode-orc, ld-decode and vhs-decode
   (`-o cvbs:<name>`, `--cvbs-encoding`).
 - **2026-10** – Fast-forward and rewind while playing a video (right and left

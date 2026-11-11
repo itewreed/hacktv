@@ -42,7 +42,8 @@ input also plays a 1 kHz tone.
 While a file is playing, Space pauses and resumes, and the right and left
 arrow keys skip forward and back by 60 seconds. An icon and the current
 position are shown on screen for a few seconds. Seeking is ignored while
-paused.
+paused. The keys are only read when stdin is a terminal, so stdin can carry
+data instead (`--teletext raw:-`, `--radiomp3-stream -`).
 
 ## Outputs
 
@@ -241,6 +242,10 @@ D/D2-MAC audio:
 | Option | Description |
 |--------|-------------|
 | `--teletext <path>` | Teletext from a `.tti` file, or every file in a directory. `raw:<file>` reads 42-byte packets, `raw:-` reads stdin. 625-line modes only, lines 7–22 and 320–335 |
+| `--radiomp3-stream [<id>:]<path>` | Send an MP3 as a r@dio.mp3 / MEGARADIO.mp3 live stream (NBC Europe, 2000–2003). `-` reads a live stream from stdin. Can be given several times. 625-line modes only, see [r@dio.mp3 / MEGARADIO.mp3](#rdiomp3--megaradiomp3) |
+| `--radiomp3-file [<id>:]<path>` | Send a file (album track, cover, HTML page, `stream.ini`) as a r@dio.mp3 file transfer. Can be given several times |
+| `--radiomp3-lines <mask>[,<mask>]` | r@dio.mp3 lines, default `0xFFFF` (all 32), or `0x00FF` (lines 7–14 and 320–327) together with teletext |
+| `--radiomp3-once` | Send the streams and files once instead of over and over |
 | `--tx-subtitles [index]` | Show subtitles as teletext on page 888. On a D/D2-MAC decoder select "English subtitles" |
 | `--subtitles [index]` | Burn subtitles into the picture |
 | `--wss <mode>` | Widescreen signalling, 625 lines: `4:3`, `14:9-letterbox`, `14:9-top`, `16:9-letterbox`, `16:9-top`, `16:9+-letterbox`, `14:9-window`, `16:9`, `auto` |
@@ -252,6 +257,58 @@ D/D2-MAC audio:
 For both subtitle options the optional index selects a subtitle stream in the
 input. If the file has no subtitle stream, hacktv loads an `.srt` file with
 the same base name next to the video (for `movie.mkv`, `movie.srt`).
+
+### r@dio.mp3 / MEGARADIO.mp3
+
+From 2000 to 2003, r@dio.mp3 (Musicplay) and later MEGARADIO.mp3
+(Megaradio/NBC GIGA) sent MP3 music, album tracks, covers and HTML pages in
+the VBI of NBC Europe, as teletext packets in magazine 8 ("TV Radio Cast" by
+RapidSolution). The encoder is a port of `rmenc` from
+[raspi-teletext](https://github.com/itewreed/raspi-teletext), and its output
+can be decoded with
+[radiomp3-decoder](https://github.com/itewreed/radiomp3-decoder), which also
+describes the format (`docs/FORMAT.md`): Reed-Solomon RS(210,182) over 15
+pages, Adler-32 per row, XORed row headers.
+
+`--radiomp3-stream` sends a file as the live stream, the MP3 audio the player
+played at once, and `--radiomp3-file` as a file transfer; both can be given
+several times. The optional ID tells the receiver which is which: a multiple
+of 10 (not 100) is a stream, any other number a file. Without an ID, streams
+get 10, 20, ... and files 1, 2, 3, ...; the name of a file (up to 24
+characters) goes in its file info. A stream named `-` is read from stdin as
+it comes, for live radio; when stdin ends, r@dio.mp3 stops. Streams and files
+take turns, one row of 880 (stream) or 858 (file) bytes each, and are sent
+over and over unless `--radiomp3-once` is given. A looped stream runs on, so
+it decodes as one long MP3. While a live stream from stdin has no data ready,
+filler rows are sent, so the video is never held up.
+
+`--radiomp3-lines` takes one 16-bit mask for both fields, or two separated by
+a comma, with the same line numbering as `--videodat-lines`: bit n set means
+line 7+n (first field) or 320+n (second field). Every 13 rows of data go out
+with 2 rows of parity as 360 packets, so all 32 lines (the default, 800
+packets/s) carry about 25400 bytes/s, 200 kbit/s for a stream alone. With
+`--teletext` the default is `0x00FF`, lines 7–14 and 320–327 (about 100
+kbit/s), and teletext uses the remaining lines. The teletext pages should not
+be in magazine 8, as their packets would break into the r@dio.mp3 pages.
+With a live stream and one file, the stream gets half of the rows: 96 kbit/s
+fits on all 32 lines, 128 kbit/s doesn't.
+
+Sent once, the packets are the same, byte for byte, as those of `rmenc`
+without `-l` and of `radiomp3 testsignal`.
+
+```sh
+# An MP3, a cover and an HTML page, as a CVBS file for testing
+hacktv -m pal --radiomp3-stream song.mp3 --radiomp3-file cover.jpg \
+       --radiomp3-file index.html -o cvbs:radiomp3 video.mkv
+
+# Live radio from stdin together with teletext
+ffmpeg -re -i http://example.com/radio -c:a libmp3lame -b:a 64k -f mp3 - \
+    | hacktv -f 551250000 -m i -g 47 --teletext src/demo.tti \
+             --radiomp3-stream - --radiomp3-file cover.jpg video.mkv
+
+# Check a capture: radiomp3-decoder reads .t42 files, e.g. from vhs-teletext
+radiomp3 decode capture.t42 -o out/
+```
 
 ## Scrambling and conditional access
 

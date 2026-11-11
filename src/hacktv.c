@@ -78,6 +78,13 @@ static void print_usage(void)
 		"      --logo <path>              Overlay picture logo over video.\n"
 		"      --timestamp                Overlay video timestamp over video.\n"
 		"      --teletext <path>          Enable teletext output. (625 line modes only)\n"
+		"      --radiomp3-stream [<id>:]<path>\n"
+		"                                 Send an MP3 as a r@dio.mp3 live stream. (625 line modes only)\n"
+		"      --radiomp3-file [<id>:]<path>\n"
+		"                                 Send a file as a r@dio.mp3 file transfer.\n"
+		"      --radiomp3-lines <mask>[,<mask>]\n"
+		"                                 Select the r@dio.mp3 lines. Default: 0xFFFF\n"
+		"      --radiomp3-once            Send the r@dio.mp3 streams and files only once.\n"
 		"      --wss <mode>               Set WSS output. Defaults to auto. (625 line modes only)\n"
 		"      --letterbox                Letterboxes widescreen content on 4:3 screen.\n"
 		"      --pillarbox                Zooms widescreen content to fill 4:3 screen.\n"
@@ -265,6 +272,29 @@ static void print_usage(void)
 		"\n"
 		"Teletext support in hacktv is only compatible with 625 line PAL modes.\n"
 		"NTSC and SECAM variations exist and may be supported in the future.\n"
+		"\n"
+		"r@dio.mp3 / MEGARADIO.mp3\n"
+		"\n"
+		"From 2000 to 2003, r@dio.mp3 and MEGARADIO.mp3 sent MP3 music, covers and\n"
+		"HTML pages in the VBI of NBC Europe, as teletext packets in magazine 8.\n"
+		"Both options can be given several times:\n"
+		"\n"
+		"  --radiomp3-stream  The live stream, the MP3 audio the player played at\n"
+		"                     once. Use - to read a live stream from stdin.\n"
+		"  --radiomp3-file    A file transfer: album track, cover, HTML page,\n"
+		"                     stream.ini. The name goes in the file info.\n"
+		"\n"
+		"The optional <id> tells the receiver which is which: a multiple of 10\n"
+		"(not 100) is a stream, any other number a file. Without one, streams get\n"
+		"10, 20, ... and files 1, 2, 3, ... Streams and files are sent over and over\n"
+		"and take turns, one row of 880 (stream) or 858 (file) bytes each.\n"
+		"\n"
+		"--radiomp3-lines takes one 16 bit mask for both fields or two separated\n"
+		"by a comma. Bit n set means line 7+n (first field) or 320+n (second\n"
+		"field) carries data. The default is all 32 lines, about 200 kbit/s for a\n"
+		"stream alone, or 0x00FF (lines 7-14 and 320-327) when teletext is also\n"
+		"enabled, which then uses the remaining lines. Teletext pages in magazine 8\n"
+		"would get in the way of r@dio.mp3 and should not be sent with it.\n"
 		"\n"
 		"WSS (Widescreen Signaling)\n"
 		"\n"
@@ -520,6 +550,10 @@ enum {
 	_OPT_MAC_AUDIO_L1_PROTECTION,
 	_OPT_MAC_AUDIO_L2_PROTECTION,
 	_OPT_SIS,
+	_OPT_RADIOMP3_STREAM,
+	_OPT_RADIOMP3_FILE,
+	_OPT_RADIOMP3_LINES,
+	_OPT_RADIOMP3_ONCE,
 	_OPT_SWAP_IQ,
 	_OPT_OFFSET,
 	_OPT_PASSTHRU,
@@ -619,6 +653,10 @@ int main(int argc, char *argv[])
 		{ "mac-audio-l1-protection", no_argument, 0, _OPT_MAC_AUDIO_L1_PROTECTION },
 		{ "mac-audio-l2-protection", no_argument, 0, _OPT_MAC_AUDIO_L2_PROTECTION },
 		{ "sis",            required_argument, 0, _OPT_SIS },
+		{ "radiomp3-stream", required_argument, 0, _OPT_RADIOMP3_STREAM },
+		{ "radiomp3-file",  required_argument, 0, _OPT_RADIOMP3_FILE },
+		{ "radiomp3-lines", required_argument, 0, _OPT_RADIOMP3_LINES },
+		{ "radiomp3-once",  no_argument,       0, _OPT_RADIOMP3_ONCE },
 		{ "swap-iq",        no_argument,       0, _OPT_SWAP_IQ },
 		{ "offset",         required_argument, 0, _OPT_OFFSET },
 		{ "passthru",       required_argument, 0, _OPT_PASSTHRU },
@@ -684,6 +722,9 @@ int main(int argc, char *argv[])
 	s.shuffle = 0;
 	s.verbose = 0;
 	s.teletext = NULL;
+	s.radiomp3_nsources = 0;
+	s.radiomp3_lines = NULL;
+	s.radiomp3_once = 0;
 	s.position = 0;
 	s.wss = NULL;
 	s.letterbox = 0;
@@ -1135,6 +1176,26 @@ int main(int argc, char *argv[])
 		
 		case _OPT_SIS: /* --sis <mode> */
 			s.sis = optarg;
+			break;
+		
+		case _OPT_RADIOMP3_STREAM: /* --radiomp3-stream [<id>:]<path> */
+		case _OPT_RADIOMP3_FILE: /* --radiomp3-file [<id>:]<path> */
+			if(s.radiomp3_nsources == RM_MAX_SOURCES)
+			{
+				fprintf(stderr, "At most %d r@dio.mp3 streams and files can be sent.\n", RM_MAX_SOURCES);
+				return(-1);
+			}
+			s.radiomp3_sources[s.radiomp3_nsources] = optarg;
+			s.radiomp3_streams[s.radiomp3_nsources] = (c == _OPT_RADIOMP3_STREAM);
+			s.radiomp3_nsources++;
+			break;
+		
+		case _OPT_RADIOMP3_LINES: /* --radiomp3-lines <mask>[,<mask>] */
+			s.radiomp3_lines = optarg;
+			break;
+		
+		case _OPT_RADIOMP3_ONCE: /* --radiomp3-once */
+			s.radiomp3_once = 1;
 			break;
 		
 		case _OPT_SWAP_IQ: /* --swap-iq */
@@ -1754,6 +1815,27 @@ int main(int argc, char *argv[])
 		}
 		
 		vid_conf.sis = s.sis;
+	}
+	
+	if(s.radiomp3_nsources > 0)
+	{
+		if(vid_conf.type != VID_RASTER_625)
+		{
+			fprintf(stderr, "r@dio.mp3 is only available with 625 line modes.\n");
+			return(-1);
+		}
+		
+		vid_conf.radiomp3 = 1;
+		vid_conf.radiomp3_nsources = s.radiomp3_nsources;
+		memcpy(vid_conf.radiomp3_sources, s.radiomp3_sources, sizeof(s.radiomp3_sources));
+		memcpy(vid_conf.radiomp3_streams, s.radiomp3_streams, sizeof(s.radiomp3_streams));
+		vid_conf.radiomp3_lines = s.radiomp3_lines;
+		vid_conf.radiomp3_once = s.radiomp3_once;
+	}
+	else if(s.radiomp3_lines || s.radiomp3_once)
+	{
+		fprintf(stderr, "--radiomp3-lines and --radiomp3-once need --radiomp3-stream or --radiomp3-file.\n");
+		return(-1);
 	}
 	
 	vid_conf.swap_iq = s.swap_iq;

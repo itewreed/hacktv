@@ -51,6 +51,7 @@ typedef struct vid_t vid_t;
 #include "graphics.h"
 #include "vitc.h"
 #include "cc608.h"
+#include "radiomp3.h"
 #include "vbidata.h"
 #include "sis.h"
 
@@ -247,6 +248,12 @@ typedef struct {
 	int vitc;
 	int cc608;
 	char *sis;
+	int radiomp3;
+	int radiomp3_nsources;
+	const char *radiomp3_sources[RM_MAX_SOURCES];
+	int radiomp3_streams[RM_MAX_SOURCES];
+	char *radiomp3_lines;
+	int radiomp3_once;
 	char *eurocrypt;
 	int ec_mat_rating;
 	char *ec_ppv;
@@ -482,6 +489,9 @@ struct vid_t {
 	
 	/* VITC state */
 	vitc_t vitc;
+	
+	/* r@dio.mp3 state */
+	radiomp3_t radiomp3;
 
 	/* Font state */
 	av_font_t *av_font;

@@ -31,6 +31,7 @@ OBJS    := acp.o \
            subtitles.o \
            syster.o \
            syster-ca.o \
+           radiomp3.o \
            teletext.o \
            vbidata.o \
            video.o \

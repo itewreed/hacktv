@@ -64,6 +64,18 @@ Overlay video timestamp over video.
 \fB\-\-teletext\fR <path>
 Enable teletext output. (625 line modes only)
 .TP
+\fB\-\-radiomp3\-stream\fR [<id>:]<path>
+Send an MP3 as a r@dio.mp3 live stream. (625 line modes only)
+.TP
+\fB\-\-radiomp3\-file\fR [<id>:]<path>
+Send a file as a r@dio.mp3 file transfer.
+.TP
+\fB\-\-radiomp3\-lines\fR <mask>[,<mask>]
+Select the r@dio.mp3 lines. Default: 0xFFFF
+.TP
+\fB\-\-radiomp3\-once\fR
+Send the r@dio.mp3 streams and files only once.
+.TP
 \fB\-\-wss\fR <mode>
 Set WSS output. Defaults to auto. (625 line modes only)
 .TP
@@ -405,6 +417,21 @@ Lines 7\-22 and 320\-335 are used, 16 lines per field.
 .PP
 Teletext support in hacktv is only compatible with 625 line PAL modes.
 NTSC and SECAM variations exist and may be supported in the future.
+.PP
+r@dio.mp3 / MEGARADIO.mp3
+.PP
+From 2000 to 2003, r@dio.mp3 and MEGARADIO.mp3 sent MP3 music, covers and
+HTML pages in the VBI of NBC Europe, as teletext packets in magazine 8.
+\-\-radiomp3\-stream sends the live stream (use \- to read it from stdin),
+\-\-radiomp3\-file a file transfer; both can be given several times. The
+optional <id> is a multiple of 10 (not 100) for a stream and any other
+number for a file. Without one, streams get 10, 20, ... and files 1, 2, 3, ...
+Streams and files take turns and are sent over and over.
+.PP
+\-\-radiomp3\-lines takes one 16 bit mask for both fields or two separated
+by a comma. Bit n set means line 7+n (first field) or 320+n (second
+field) carries data. The default is all 32 lines, or 0x00FF when teletext
+is also enabled, which then uses the remaining lines.
 .PP
 WSS (Widescreen Signaling)
 .PP

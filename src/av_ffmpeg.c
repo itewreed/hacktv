@@ -1077,7 +1077,13 @@ static int _ffmpeg_read_video(void *ctx, av_frame_t *frame)
 	}
 
 	kb_enable();
+	#ifndef WIN32
+	/* Only take keys from a terminal. stdin can also carry data, such as
+	 * a raw teletext stream or a r@dio.mp3 live stream */
+	if(isatty(0) && kbhit())
+	#else
 	if(kbhit())
+	#endif
 	{
 		#ifndef WIN32
 		int c = _kb_getc();

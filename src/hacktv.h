@@ -95,6 +95,9 @@ typedef struct {
 	int mac_audio_protection;
 	int mac_audio_companded;
 	char *sis;
+	char *videodat;
+	char *videodat_lines;
+	char *videodat_info;
 	int swap_iq;
 	int64_t offset;
 	char *passthru;

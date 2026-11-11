@@ -50,6 +50,7 @@ typedef struct vid_t vid_t;
 #include "vits.h"
 #include "graphics.h"
 #include "vitc.h"
+#include "videodat.h"
 #include "cc608.h"
 #include "vbidata.h"
 #include "sis.h"
@@ -247,6 +248,9 @@ typedef struct {
 	int vitc;
 	int cc608;
 	char *sis;
+	char *videodat;
+	char *videodat_lines;
+	char *videodat_info;
 	char *eurocrypt;
 	int ec_mat_rating;
 	char *ec_ppv;
@@ -482,6 +486,9 @@ struct vid_t {
 	
 	/* VITC state */
 	vitc_t vitc;
+	
+	/* Channel VideoDat state */
+	videodat_t videodat;
 
 	/* Font state */
 	av_font_t *av_font;
